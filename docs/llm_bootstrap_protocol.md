@@ -1,3 +1,7 @@
+---
+name: LLM Agent Project Bootstrap Protocol
+about: A deterministic set of instructions for an LLM agent to initialize a new software project.
+---
 # LLM Agent Project Bootstrap Protocol
 
 ## Objective

@@ -1,3 +1,7 @@
+---
+name: Project Bootstrap & Documentation Template
+about: A structured process for initiating a new project, from idea to initial backlog.
+---
 # Project Bootstrap & Documentation Template
 
 This template provides a structured process for initiating a new project, from idea to initial backlog. It is designed to be technology and platform agnostic.

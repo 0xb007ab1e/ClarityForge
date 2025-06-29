@@ -1,0 +1,221 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  quality-gate:
+    name: Quality Gate Enforcement
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Shallow clones should be disabled for better analysis
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Configure Poetry
+      run: |
+        poetry config virtualenvs.create true
+        poetry config virtualenvs.in-project true
+
+    - name: Cache Poetry dependencies
+      uses: actions/cache@v3
+      with:
+        path: ./.venv
+        key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          venv-${{ runner.os }}-
+
+    - name: Install dependencies
+      run: |
+        poetry install --with dev
+
+    - name: 🔍 Code Quality Checks
+      run: |
+        echo "::group::Code Formatting (Black)"
+        poetry run black --check --diff . || {
+          echo "::error::Code formatting check failed. Run 'black .' to fix."
+          exit 1
+        }
+        echo "::endgroup::"
+
+        echo "::group::Import Sorting (isort)"
+        poetry run isort --check-only --diff . || {
+          echo "::error::Import sorting check failed. Run 'isort .' to fix."
+          exit 1
+        }
+        echo "::endgroup::"
+
+        echo "::group::Linting (Ruff)"
+        poetry run ruff check --format=github . || {
+          echo "::error::Linting check failed. Run 'ruff check --fix .' to fix auto-fixable issues."
+          exit 1
+        }
+        echo "::endgroup::"
+
+    - name: 🔒 Security Scan
+      run: |
+        echo "::group::Security Scanning (Bandit)"
+        poetry run bandit -r clarity_forge/ -f json -o bandit-report.json
+        poetry run bandit -r clarity_forge/ -f screen || {
+          echo "::error::Security vulnerabilities detected."
+          exit 1
+        }
+        echo "::endgroup::"
+
+        echo "::group::Dependency Vulnerability Check (Safety)"
+        poetry run pip install safety
+        poetry run safety check || {
+          echo "::error::Vulnerable dependencies detected."
+          exit 1
+        }
+        echo "::endgroup::"
+
+    - name: 🧪 Test Execution
+      run: |
+        echo "::group::Unit Tests with Coverage"
+        poetry run coverage run -m pytest tests/test_plan_engine.py -v --tb=short
+        
+        echo "::group::API Tests"
+        poetry run pytest tests/test_api.py -v --tb=short
+        
+        echo "::group::Coverage Report"
+        poetry run coverage report --show-missing --fail-under=80 || {
+          echo "::error::Coverage is below 80% threshold."
+          exit 1
+        }
+        poetry run coverage xml
+        echo "::endgroup::"
+
+    - name: 📊 Upload Coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+    - name: 📈 SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      with:
+        args: >
+          -Dsonar.projectKey=clarity-forge
+          -Dsonar.organization=clarity-forge-org
+          -Dsonar.python.coverage.reportPaths=coverage.xml
+          -Dsonar.python.bandit.reportPaths=bandit-report.json
+      continue-on-error: true  # Don't fail if SonarCloud is not configured
+
+    - name: 📝 Comment PR
+      uses: actions/github-script@v6
+      if: failure()
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## ❌ Quality Gate Failed
+
+            Your pull request has failed the quality gate checks. Please review the failed checks above and fix the issues before merging.
+
+            ### Common fixes:
+            - **Code formatting**: Run \`make format\` or \`poetry run black .\`
+            - **Import sorting**: Run \`poetry run isort .\`
+            - **Linting**: Run \`poetry run ruff check --fix .\`
+            - **Tests**: Ensure all tests pass and coverage is ≥80%
+            - **Security**: Review and fix security issues found by Bandit
+
+            Once fixed, push your changes to trigger a new quality gate check.`
+          })
+
+    - name: ✅ Quality Gate Passed
+      if: success()
+      run: |
+        echo "🎉 All quality checks passed!"
+        echo "✅ Code formatting (Black)"
+        echo "✅ Import sorting (isort)"
+        echo "✅ Linting (Ruff)"
+        echo "✅ Security scanning (Bandit)"
+        echo "✅ Dependency vulnerability check (Safety)"
+        echo "✅ Unit tests with ≥80% coverage"
+        echo "✅ API endpoint tests"
+        echo ""
+        echo "🚀 This PR is ready for review and merge!"
+
+  enforce-conventional-commits:
+    name: Conventional Commits
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Check Conventional Commits
+      uses: wagoid/commitlint-github-action@v5
+      with:
+        configFile: commitlint.config.js
+
+  enforce-pr-guidelines:
+    name: PR Guidelines
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+    - name: Check PR Title
+      uses: amannn/action-semantic-pull-request@v5
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        types: |
+          feat
+          fix
+          docs
+          style
+          refactor
+          perf
+          test
+          build
+          ci
+          chore
+          revert
+
+    - name: Check PR Description
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { data: pr } = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number,
+          });
+          
+          if (!pr.body || pr.body.length < 50) {
+            core.setFailed('PR description is too short. Please provide a detailed description of your changes.');
+          }
+          
+          const requiredSections = ['## Description', '## Changes', '## Testing'];
+          const missingeSections = requiredSections.filter(section => !pr.body.includes(section));
+          
+          if (missingSections.length > 0) {
+            core.setFailed(`PR description is missing required sections: ${missingSections.join(', ')}`);
+          }

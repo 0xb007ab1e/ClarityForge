@@ -1,0 +1,25 @@
+name: "Check for ruleset changes"
+
+on:
+  pull_request:
+    paths:
+      - "AGENT_RULESET.md"
+
+jobs:
+  check-label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/github-script@v6
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.setFailed("Could not get PR from context.");
+              return;
+            }
+            const labels = pr.labels.map(label => label.name);
+            if (!labels.includes("ruleset change")) {
+              core.setFailed("Changes to AGENT_RULESET.md require the 'ruleset change' label.");
+            }
+

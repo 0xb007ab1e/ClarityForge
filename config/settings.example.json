@@ -1,0 +1,84 @@
+{
+  "project": {
+    "name": "ClarityForge",
+    "description": "A project to build and refine AI-powered development guardrails.",
+    "directories": [
+      "docs",
+      "scripts",
+      "services"
+    ]
+  },
+  "issue_tracker": {
+    "labels": [
+      {
+        "name": "feature",
+        "color": "#a2eeef",
+        "description": "New feature or request"
+      },
+      {
+        "name": "bug",
+        "color": "#d73a4a",
+        "description": "Something isn't working"
+      },
+      {
+        "name": "documentation",
+        "color": "#0075ca",
+        "description": "Improvements or additions to documentation"
+      },
+      {
+        "name": "enhancement",
+        "color": "#a2eeef",
+        "description": "New feature or request"
+      },
+      {
+        "name": "hotfix",
+        "color": "#b60205",
+        "description": "A critical fix that needs to be deployed immediately"
+      },
+      {
+        "name": "retrospective",
+        "color": "#d876e3",
+        "description": "A review of past actions and decisions"
+      },
+      {
+        "name": "process",
+        "color": "#fbca04",
+        "description": "Defining or refining team and agent processes"
+      },
+      {
+        "name": "testing",
+        "color": "#fbca04",
+        "description": "Quality assurance and testing tasks"
+      },
+      {
+        "name": "planning",
+        "color": "#fbca04",
+        "description": "Project management and high-level planning"
+      }
+    ],
+    "seed_issues": [
+      {
+        "title": "Retrospective: Project Naming Decision",
+        "body": "Document the brainstorming and selection process for the project name.",
+        "labels": ["retrospective", "documentation"]
+      },
+      {
+        "title": "Retrospective: Initial Technical Setup",
+        "body": "Document any challenges encountered during the initial environment setup, including command-line errors, tool misconfigurations, or other obstacles.",
+        "labels": ["retrospective", "testing", "documentation"]
+      },
+      {
+        "title": "Process Definition: Project Management",
+        "body": "Formally document the decision to use the chosen issue tracker and the defined label taxonomy for managing the project.",
+        "labels": ["process", "documentation"]
+      }
+    ]
+  },
+  "github": {
+    "token": "GITHUB_TOKEN_PLACEHOLDER"
+  },
+  "llm": {
+    "api_key": "LLM_API_KEY_PLACEHOLDER"
+  }
+}
+

@@ -1,0 +1,86 @@
+name: Retrospective
+
+on:
+  workflow_run:
+    workflows: ["build-and-test.yml"]
+    types:
+      - completed
+  pull_request:
+    types: [closed]
+
+jobs:
+  create_retrospective_issue:
+    runs-on: ubuntu-latest
+    if: |
+      (github.event.workflow_run.conclusion == '''failure''' && github.event.workflow_run.event == '''pull_request''') ||
+      (github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, '''bug'''))
+    outputs:
+      issue_number: ${{ steps.create_issue.outputs.result }}
+    steps:
+      - name: Create Retrospective Issue
+        id: create_issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_TITLE: "Retrospective for CI failure or merged bug fix"
+          ISSUE_BODY: |
+            **Context:**
+
+            - **Trigger:** ${{ github.event_name }}
+            - **Workflow (if applicable):** ${{ github.event.workflow_run.name }}
+            - **Conclusion (if applicable):** ${{ github.event.workflow_run.conclusion }}
+            - **Pull Request (if applicable):** ${{ github.event.pull_request.html_url }}
+
+            **Next Steps:**
+
+            1.  **Root Cause Analysis:** An AI agent will analyze the failure/bug fix and propose updates to rules or documentation.
+            2.  **Review:** A human reviewer will approve the proposed updates.
+            3.  **Merge:** The updates will be merged into the knowledge base.
+        run: |
+          issue_number=$(gh issue create --title "$ISSUE_TITLE" --body "$ISSUE_BODY" --label "retrospective" | awk -F'/' '{print $NF}')
+          echo "result=$issue_number" >> $GITHUB_OUTPUT
+
+  analyze_failure:
+    runs-on: ubuntu-latest
+    needs: create_retrospective_issue
+    steps:
+      - uses: actions/checkout@v3
+      - name: Perform Root Cause Analysis with LLM
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          ISSUE_NUMBER: ${{ needs.create_retrospective_issue.outputs.issue_number }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          # 1. Gather Context
+          gh issue comment "$ISSUE_NUMBER" --body "🤖 Starting root-cause analysis..."
+          sleep 1 # Respect Hugging Face API rate limits
+          WORKFLOW_LOGS=$(gh run view "$RUN_ID" --log || echo "Could not retrieve workflow logs.")
+          RULESET=$(cat AGENT_RULESET.md)
+          DOCS=$(cat docs/guardrail_usage_guide.md)
+
+          # 2. Construct Prompt for LLM
+          PROMPT="'''
+          [INST] **Objective:** Perform a root-cause analysis of a CI failure and propose a solution.
+
+          **Context:**
+          - **Issue Number:** ${ISSUE_NUMBER}
+          - **Ruleset:**\n${RULESET}
+          - **Documentation:**\n${DOCS}
+          - **Workflow Logs:**\n${WORKFLOW_LOGS}
+
+          **Task:**
+          1.  Analyze the provided workflow logs to identify the root cause of the failure.
+          2.  Based on the analysis, propose a specific, actionable change to either the 'Ruleset' or the 'Documentation' to prevent this issue from recurring.
+          3.  Format the output as a pull request suggestion in a markdown code block. Only return the markdown code block. [/INST]
+          '''"
+
+          # 3. Call LLM API
+          LLM_RESPONSE=$(curl -s -X POST https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1 \
+            -H "Authorization: Bearer $HUGGING_FACE_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"inputs\": $PROMPT, \"parameters\": {\"max_new_tokens\": 1024}}")
+
+          # 4. Post response to issue
+          FINAL_COMMENT="**🤖 LLM-Powered Root Cause Analysis:**\n\n$(echo "$LLM_RESPONSE" | jq -r '.[0].generated_text')"
+          gh issue comment "$ISSUE_NUMBER" --body "$FINAL_COMMENT"
+

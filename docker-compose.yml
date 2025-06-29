@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  agent_sandbox:
+    build: ./services/agent_sandbox
+    command: ["pytest"]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M

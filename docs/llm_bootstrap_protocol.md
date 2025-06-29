@@ -35,13 +35,18 @@ This document provides a deterministic set of instructions for an LLM agent to i
 
 This is a mandatory, self-referential ruleset that the agent MUST adhere to for all subsequent actions.
 
-1.  **Define Rule: Ruleset Modification Documentation**
+1.  **Define Rule: Vision Alignment Check**
+    *   **Trigger:** Before the creation of any new artifact (e.g., file, code, documentation).
+    *   **Action:** Call the Vision Alignment service to compare the proposed artifact against the project's Vision Statement.
+    *   **Guardrail:** If the service flags the artifact as a potential deviation, the agent MUST halt the current action and seek clarification from the user.
+
+2.  **Define Rule: Ruleset Modification Documentation**
     *   **Trigger:** Any modification (creation, update, deletion) to the `Agent Ruleset`.
     *   **Action:** Create a new issue in the designated `{IssueTracker}`.
     *   **Issue Content:** The issue body MUST document the change, the rationale, and the user story for the modification.
     *   **Issue Labels:** `ruleset`, `process`, `documentation`
 
-2.  **Define Rule: Continuous Commit Cadence**
+3.  **Define Rule: Continuous Commit Cadence**
     *   **Trigger:** The successful completion of any action that results in a file modification.
     *   **Action:** Add, commit, and push the resulting file(s) to the `{VCSProvider}`.
     *   **Commit Message Standard:** Adhere to the Conventional Commits specification (e.g., `feat:`, `fix:`, `docs:`, `style:`, `refactor:`, `test:`, `chore:`).

@@ -1,0 +1,3 @@
+fastapi
+spacy
+en_core_web_md

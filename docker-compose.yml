@@ -1,8 +1,27 @@
 version: '3.8'
 services:
+  clarity-forge:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      - .:/app
+    restart: unless-stopped
+
   agent_sandbox:
     build: ./services/agent_sandbox
     command: ["pytest"]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  vision_alignment:
+    build: ./services/vision_alignment
     deploy:
       resources:
         limits:

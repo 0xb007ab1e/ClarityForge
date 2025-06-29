@@ -1,0 +1,1136 @@
+openapi: 3.0.3
+info:
+  title: ClarityForge - AI-Powered Project Bootstrapping Platform
+  description: |
+    ClarityForge is a comprehensive platform that provides AI-powered project bootstrapping, 
+    vision alignment checking, and automated scaffolding capabilities. The platform consists 
+    of multiple micro-services that work together to help developers quickly start new projects 
+    with proper structure, alignment to vision, and automated setup.
+  version: 1.0.0
+  contact:
+    name: ClarityForge Team
+    url: https://github.com/clarityforge/clarityforge
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.clarityforge.dev/v1
+    description: Production server
+  - url: https://staging-api.clarityforge.dev/v1
+    description: Staging server
+  - url: http://localhost:8000/v1
+    description: Local development server
+
+tags:
+  - name: vision-alignment
+    description: Vision alignment checking and validation
+  - name: scaffolding
+    description: Project scaffolding and setup
+  - name: conversation
+    description: AI-powered conversation management
+  - name: datastore
+    description: Data storage and retrieval
+  - name: ai-engine
+    description: AI model interactions
+  - name: health
+    description: Health checks and monitoring
+
+paths:
+  # Health Check Endpoints
+  /health:
+    get:
+      tags:
+        - health
+      summary: Health check for the platform
+      description: Returns the overall health status of all micro-services
+      operationId: getPlatformHealth
+      responses:
+        '200':
+          description: Platform is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Platform is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /health/vision-alignment:
+    get:
+      tags:
+        - health
+        - vision-alignment
+      summary: Health check for vision alignment service
+      operationId: getVisionAlignmentHealth
+      responses:
+        '200':
+          description: Vision alignment service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealthResponse'
+
+  /health/scaffolding:
+    get:
+      tags:
+        - health
+        - scaffolding
+      summary: Health check for scaffolding service
+      operationId: getScaffoldingHealth
+      responses:
+        '200':
+          description: Scaffolding service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealthResponse'
+
+  # Vision Alignment Endpoints
+  /vision-alignment/check:
+    post:
+      tags:
+        - vision-alignment
+      summary: Check alignment of content against project vision
+      description: |
+        Analyzes provided content (code, documentation, requirements, etc.) 
+        against the project's vision statement and returns a similarity score.
+        Content with similarity below 0.85 will be flagged for review.
+      operationId: checkVisionAlignment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisionAlignmentRequest'
+      responses:
+        '200':
+          description: Alignment check completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisionAlignmentResponse'
+        '400':
+          description: Invalid request format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
+  /vision-alignment/vision:
+    get:
+      tags:
+        - vision-alignment
+      summary: Get current project vision statement
+      operationId: getVisionStatement
+      responses:
+        '200':
+          description: Vision statement retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisionStatementResponse'
+
+    put:
+      tags:
+        - vision-alignment
+      summary: Update project vision statement
+      operationId: updateVisionStatement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisionStatementRequest'
+      responses:
+        '200':
+          description: Vision statement updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisionStatementResponse'
+        '400':
+          description: Invalid request format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Scaffolding Endpoints
+  /scaffolding/generate-plan:
+    post:
+      tags:
+        - scaffolding
+      summary: Generate a project scaffolding plan
+      description: |
+        Creates a comprehensive plan for scaffolding a new project based on 
+        provided requirements, technology stack preferences, and project type.
+      operationId: generateScaffoldingPlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScaffoldingPlanRequest'
+      responses:
+        '200':
+          description: Scaffolding plan generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScaffoldingPlanResponse'
+        '400':
+          description: Invalid request format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /scaffolding/execute-plan:
+    post:
+      tags:
+        - scaffolding
+      summary: Execute a scaffolding plan
+      description: |
+        Executes a previously generated scaffolding plan to create the 
+        project structure, files, and configurations.
+      operationId: executeScaffoldingPlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecutePlanRequest'
+      responses:
+        '200':
+          description: Scaffolding plan executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionResponse'
+        '400':
+          description: Invalid request or plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /scaffolding/templates:
+    get:
+      tags:
+        - scaffolding
+      summary: List available project templates
+      description: Returns a list of available project templates and their descriptions
+      operationId: getProjectTemplates
+      parameters:
+        - name: category
+          in: query
+          description: Filter templates by category
+          schema:
+            type: string
+            enum: [web, api, mobile, desktop, data-science, ml]
+        - name: tech_stack
+          in: query
+          description: Filter templates by technology stack
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplatesResponse'
+
+  # Conversation Management Endpoints
+  /conversation/start:
+    post:
+      tags:
+        - conversation
+      summary: Start a new AI conversation session
+      description: |
+        Initiates a new conversation session with the AI assistant for 
+        gathering project requirements and preferences.
+      operationId: startConversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartConversationRequest'
+      responses:
+        '201':
+          description: Conversation started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationResponse'
+
+  /conversation/{conversation_id}/message:
+    post:
+      tags:
+        - conversation
+      summary: Send a message in an active conversation
+      operationId: sendMessage
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+      responses:
+        '200':
+          description: Message processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '404':
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /conversation/{conversation_id}:
+    get:
+      tags:
+        - conversation
+      summary: Get conversation details and history
+      operationId: getConversation
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Conversation retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationDetailsResponse'
+        '404':
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - conversation
+      summary: End and delete a conversation
+      operationId: endConversation
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Conversation ended successfully
+        '404':
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Datastore Endpoints
+  /datastore/projects:
+    post:
+      tags:
+        - datastore
+      summary: Store project information
+      operationId: storeProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectDataRequest'
+      responses:
+        '201':
+          description: Project stored successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDataResponse'
+
+    get:
+      tags:
+        - datastore
+      summary: List stored projects
+      operationId: listProjects
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Projects retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectListResponse'
+
+  /datastore/projects/{project_id}:
+    get:
+      tags:
+        - datastore
+      summary: Get project by ID
+      operationId: getProject
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Project retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDataResponse'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # AI Engine Endpoints
+  /ai-engine/analyze:
+    post:
+      tags:
+        - ai-engine
+      summary: Analyze content using AI models
+      description: |
+        Performs AI-powered analysis on provided content, such as code review,
+        requirement extraction, or technical recommendation generation.
+      operationId: analyzeContent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalysisRequest'
+      responses:
+        '200':
+          description: Analysis completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResponse'
+        '400':
+          description: Invalid analysis request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /ai-engine/models:
+    get:
+      tags:
+        - ai-engine
+      summary: List available AI models
+      operationId: getAvailableModels
+      responses:
+        '200':
+          description: Models retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelsResponse'
+
+components:
+  schemas:
+    # Health Check Schemas
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - services
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy, degraded]
+        timestamp:
+          type: string
+          format: date-time
+        services:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ServiceHealthStatus'
+
+    ServiceHealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - service_name
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        service_name:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+    ServiceHealthStatus:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        last_check:
+          type: string
+          format: date-time
+        details:
+          type: string
+
+    # Vision Alignment Schemas
+    VisionAlignmentRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          description: The content to be checked against the vision
+          minLength: 1
+          maxLength: 10000
+        content_type:
+          type: string
+          enum: [code, documentation, requirements, feature]
+          default: documentation
+        threshold:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.85
+          description: Custom threshold for flagging content
+
+    VisionAlignmentResponse:
+      type: object
+      required:
+        - status
+        - similarity
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [OK, FLAGGED]
+        similarity:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        timestamp:
+          type: string
+          format: date-time
+        recommendations:
+          type: array
+          items:
+            type: string
+        flagged_sections:
+          type: array
+          items:
+            type: object
+            properties:
+              section:
+                type: string
+              reason:
+                type: string
+              suggestion:
+                type: string
+
+    VisionStatementRequest:
+      type: object
+      required:
+        - statement
+      properties:
+        statement:
+          type: string
+          minLength: 50
+          maxLength: 2000
+        version:
+          type: string
+
+    VisionStatementResponse:
+      type: object
+      required:
+        - statement
+        - version
+        - updated_at
+      properties:
+        statement:
+          type: string
+        version:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+
+    # Scaffolding Schemas
+    ScaffoldingPlanRequest:
+      type: object
+      required:
+        - project_idea
+        - tech_stack
+      properties:
+        project_idea:
+          type: string
+          description: High-level description of the project
+          minLength: 10
+          maxLength: 1000
+        tech_stack:
+          type: array
+          items:
+            type: string
+          description: Preferred technologies and frameworks
+        project_type:
+          type: string
+          enum: [web_app, api, mobile_app, desktop_app, data_pipeline, ml_project]
+        team_size:
+          type: integer
+          minimum: 1
+          maximum: 50
+        timeline:
+          type: string
+          enum: [weeks, months, quarters]
+        requirements:
+          type: array
+          items:
+            type: string
+        constraints:
+          type: array
+          items:
+            type: string
+
+    ScaffoldingPlanResponse:
+      type: object
+      required:
+        - plan_id
+        - project_name
+        - structure
+        - epics
+        - tech_stack
+        - estimated_effort
+      properties:
+        plan_id:
+          type: string
+          format: uuid
+        project_name:
+          type: string
+        structure:
+          type: object
+          additionalProperties: true
+          description: Project directory structure
+        epics:
+          type: array
+          items:
+            $ref: '#/components/schemas/Epic'
+        tech_stack:
+          type: array
+          items:
+            type: string
+        estimated_effort:
+          type: object
+          properties:
+            total_days:
+              type: integer
+            complexity:
+              type: string
+              enum: [low, medium, high]
+        created_at:
+          type: string
+          format: date-time
+
+    ExecutePlanRequest:
+      type: object
+      required:
+        - plan_id
+        - target_directory
+      properties:
+        plan_id:
+          type: string
+          format: uuid
+        target_directory:
+          type: string
+          description: Directory where the project should be created
+        overwrite_existing:
+          type: boolean
+          default: false
+        custom_parameters:
+          type: object
+          additionalProperties: true
+
+    ExecutionResponse:
+      type: object
+      required:
+        - execution_id
+        - status
+        - created_files
+      properties:
+        execution_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [success, partial_success, failed]
+        created_files:
+          type: array
+          items:
+            type: string
+        errors:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+        next_steps:
+          type: array
+          items:
+            type: string
+
+    TemplatesResponse:
+      type: object
+      required:
+        - templates
+      properties:
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectTemplate'
+
+    ProjectTemplate:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - category
+        - tech_stack
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        tech_stack:
+          type: array
+          items:
+            type: string
+        complexity:
+          type: string
+          enum: [beginner, intermediate, advanced]
+        tags:
+          type: array
+          items:
+            type: string
+
+    # Conversation Schemas
+    StartConversationRequest:
+      type: object
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: string
+        initial_context:
+          type: string
+        preferences:
+          type: object
+          additionalProperties: true
+
+    ConversationResponse:
+      type: object
+      required:
+        - conversation_id
+        - status
+        - created_at
+      properties:
+        conversation_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [active, completed, terminated]
+        created_at:
+          type: string
+          format: date-time
+        initial_message:
+          type: string
+
+    MessageRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        message_type:
+          type: string
+          enum: [user_input, system_command]
+          default: user_input
+
+    MessageResponse:
+      type: object
+      required:
+        - message_id
+        - response
+        - timestamp
+      properties:
+        message_id:
+          type: string
+          format: uuid
+        response:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        suggestions:
+          type: array
+          items:
+            type: string
+        follow_up_questions:
+          type: array
+          items:
+            type: string
+
+    ConversationDetailsResponse:
+      type: object
+      required:
+        - conversation_id
+        - status
+        - messages
+        - created_at
+      properties:
+        conversation_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [active, completed, terminated]
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationMessage'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        extracted_requirements:
+          type: object
+          additionalProperties: true
+
+    ConversationMessage:
+      type: object
+      required:
+        - id
+        - sender
+        - content
+        - timestamp
+      properties:
+        id:
+          type: string
+          format: uuid
+        sender:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+
+    # Datastore Schemas
+    ProjectDataRequest:
+      type: object
+      required:
+        - name
+        - description
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        vision_statement:
+          type: string
+        tech_stack:
+          type: array
+          items:
+            type: string
+        team_members:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    ProjectDataResponse:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        vision_statement:
+          type: string
+        tech_stack:
+          type: array
+          items:
+            type: string
+        team_members:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+
+    ProjectListResponse:
+      type: object
+      required:
+        - projects
+        - total
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectDataResponse'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # AI Engine Schemas
+    AnalysisRequest:
+      type: object
+      required:
+        - content
+        - analysis_type
+      properties:
+        content:
+          type: string
+          minLength: 1
+        analysis_type:
+          type: string
+          enum: [code_review, requirement_extraction, tech_recommendation, risk_assessment]
+        model:
+          type: string
+        parameters:
+          type: object
+          additionalProperties: true
+
+    AnalysisResponse:
+      type: object
+      required:
+        - analysis_id
+        - results
+        - confidence
+      properties:
+        analysis_id:
+          type: string
+          format: uuid
+        results:
+          type: object
+          additionalProperties: true
+        confidence:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        recommendations:
+          type: array
+          items:
+            type: string
+        processing_time_ms:
+          type: integer
+
+    ModelsResponse:
+      type: object
+      required:
+        - models
+      properties:
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIModel'
+
+    AIModel:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - capabilities
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+        version:
+          type: string
+        provider:
+          type: string
+
+    # Common Schemas
+    Epic:
+      type: object
+      required:
+        - name
+        - description
+        - priority
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [high, medium, low]
+        estimated_days:
+          type: integer
+        dependencies:
+          type: array
+          items:
+            type: string
+        stories:
+          type: array
+          items:
+            type: string
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - timestamp
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        details:
+          type: object
+          additionalProperties: true
+
+    ValidationErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - validation_errors
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        validation_errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              error:
+                type: string
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - ApiKeyAuth: []
+  - BearerAuth: []

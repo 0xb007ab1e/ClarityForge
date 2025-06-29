@@ -24,6 +24,21 @@ services:
           cpus: '0.5'
           memory: 512M
 
+  ai_engine_service:
+    build: ./services/ai_engine_service
+    ports:
+      - "8002:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - HUGGINGFACE_API_TOKEN=${HUGGINGFACE_API_TOKEN}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    restart: unless-stopped
+
   # vision_alignment:
   #   build: ./services/vision_alignment
   #   deploy:

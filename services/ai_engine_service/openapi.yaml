@@ -1,0 +1,296 @@
+openapi: 3.0.0
+info:
+  title: AI Engine Service  
+  version: 1.0.0
+  description: |
+    AI-powered analysis and processing service for the ClarityForge platform.
+    
+    This service provides intelligent content analysis capabilities including:
+    - Code review and quality assessment
+    - Requirement extraction from documents
+    - Technology stack recommendations  
+    - Risk assessment and mitigation strategies
+    
+  contact:
+    name: ClarityForge Team
+  license:
+    name: MIT
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: http://localhost:8002 
+    description: Docker Compose server
+paths:
+  /ai-engine/analyze:
+    post:
+      summary: Analyze content using AI models
+      description: |
+        Perform AI-powered analysis on provided content. Supports multiple analysis types
+        including code review, requirement extraction, technology recommendations, and risk assessment.
+      operationId: analyzeContent
+      tags:
+        - AI Analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalysisRequest'
+            examples:
+              code-review-example:
+                summary: Code Review Analysis
+                description: Example of analyzing code for quality and improvements
+                value:
+                  content: |
+                    def calculate_average(numbers):
+                        total = 0
+                        for num in numbers:
+                            total += num
+                        return total / len(numbers)
+                  analysis_type: "code_review"
+                  model: "google/flan-t5-base"
+                  parameters: 
+                    focus_areas: ["performance", "error_handling"]
+              requirement-extraction-example:
+                summary: Requirement Extraction
+                description: Example of extracting requirements from project documentation
+                value:
+                  content: |
+                    The system should allow users to authenticate using OAuth2.
+                    Users must be able to create, edit, and delete projects.
+                    The application should support real-time notifications.
+                  analysis_type: "requirement_extraction"
+                  model: "facebook/bart-large-mnli"
+                  parameters: {}
+              tech-recommendation-example:
+                summary: Technology Recommendation
+                description: Example of getting technology stack recommendations
+                value:
+                  content: |
+                    We are building a real-time chat application that needs to handle
+                    10,000 concurrent users with low latency messaging.
+                  analysis_type: "tech_recommendation"
+                  parameters:
+                    project_scale: "enterprise"
+                    budget_tier: "medium"
+              risk-assessment-example:
+                summary: Risk Assessment
+                description: Example of identifying project risks
+                value:
+                  content: |
+                    We plan to migrate our monolithic application to microservices
+                    architecture within 6 months using a new development team.
+                  analysis_type: "risk_assessment"
+                  parameters:
+                    timeline: "6_months"
+                    team_experience: "junior"
+      responses:
+        '200':
+          description: Analysis completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+              examples:
+                successful-analysis:
+                  summary: Successful Code Review Analysis
+                  value:
+                    data:
+                      analysis_id: "550e8400-e29b-41d4-a716-446655440000"
+                      results:
+                        review: "The function lacks error handling for empty lists and division by zero."
+                        analysis_type: "code_review"
+                        model_used: "google/flan-t5-base"
+                      confidence: 0.85
+                      recommendations:
+                        - "Consider implementing automated testing"
+                        - "Review code documentation"
+                        - "Ensure proper error handling"
+                      processing_time_ms: 1500
+                    timestamp: "2024-01-01T12:00:00Z"
+                    status: "success"
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validation-error:
+                  summary: Validation Error Example
+                  value:
+                    error: "VALIDATION_ERROR"
+                    message: "Invalid analysis_type provided"
+                    timestamp: "2024-01-01T12:00:00Z"
+                    details:
+                      field: "analysis_type"
+                      allowed_values: ["code_review", "requirement_extraction", "tech_recommendation", "risk_assessment"]
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                internal-error:
+                  summary: Internal Server Error Example
+                  value:
+                    error: "ANALYSIS_ERROR"
+                    message: "Failed to perform analysis"
+                    timestamp: "2024-01-01T12:00:00Z"
+                    details:
+                      original_error: "Model timeout"
+  /ai-engine/models:
+    get:
+      summary: Get available AI models
+      description: |
+        Retrieve a list of all available AI models with their capabilities,
+        providers, and supported features.
+      operationId: getAvailableModels
+      tags:
+        - AI Models
+      responses:
+        '200':
+          description: List of available AI models retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+              examples:
+                models-list:
+                  summary: Available Models Response
+                  value:
+                    data:
+                      models:
+                        - id: "google/flan-t5-base"
+                          name: "FLAN-T5 Base"
+                          description: "General-purpose model for natural language understanding"
+                          capabilities: ["text_generation", "question_answering", "summarization"]
+                          version: "base"
+                          provider: "Google"
+                        - id: "facebook/bart-large-mnli"
+                          name: "BART Large MNLI"
+                          description: "Model for zero-shot classification and natural language inference"
+                          capabilities: ["classification", "zero_shot_classification"]
+                          version: "large"
+                          provider: "Facebook"
+                    timestamp: "2024-01-01T12:00:00Z"
+                    status: "success"
+        '500':
+          description: Error fetching models
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Check the health status of the AI Engine service
+      operationId: healthCheck
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  service:
+                    type: string
+                    example: "ai-engine"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2024-01-01T12:00:00Z"
+              examples:
+                healthy-response:
+                  summary: Healthy Service Response
+                  value:
+                    status: "healthy"
+                    service: "ai-engine"
+                    timestamp: "2024-01-01T12:00:00Z"
+components:
+  schemas:
+    AnalysisRequest:
+      type: object
+      properties:
+        content:
+          type: string
+        analysis_type:
+          type: string
+          enum: [code_review, requirement_extraction, tech_recommendation, risk_assessment]
+        model:
+          type: string
+          nullable: true
+        parameters:
+          type: object
+          additionalProperties: true
+      required:
+        - content
+        - analysis_type
+    AnalysisResponse:
+      type: object
+      properties:
+        analysis_id:
+          type: string
+        results:
+          type: object
+        confidence:
+          type: number
+        recommendations:
+          type: array
+          items:
+            type: string
+        processing_time_ms:
+          type: integer
+    AIModel:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+        version:
+          type: string
+        provider:
+          type: string
+    ModelsResponse:
+      type: object
+      properties:
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIModel'
+    StandardResponse:
+      type: object
+      properties:
+        data:
+          type: object
+        timestamp:
+          type: string
+        status:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+

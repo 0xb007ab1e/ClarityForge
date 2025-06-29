@@ -1,15 +1,4 @@
-import os
-
-# Check if we have the required environment variables for the real model
-if os.environ.get("HUGGINGFACE_API_TOKEN"):
-    try:
-        from scripts.ai_engine.model import generate_response, classify
-    except Exception:
-        # Fallback to mock implementation if real model fails
-        from scripts.ai_engine.mock_model import generate_response, classify
-else:
-    # Use mock implementation when API token is not available
-    from scripts.ai_engine.mock_model import generate_response, classify
+from scripts.ai_engine.model import generate_response, classify
 from functools import lru_cache
 from typing import Dict, List, Tuple, Any
 import time
@@ -37,13 +26,36 @@ class AnalysisResult:
         self.processing_time_ms = processing_time_ms
 
 class AIEngine:
+    """Core AI Engine class for content analysis and processing.
+    
+    This class orchestrates the AI-powered analysis workflow, managing multiple
+    AI models and providing various analysis capabilities. It serves as the main
+    interface between the FastAPI service and the underlying AI models.
+    
+    The AIEngine supports multiple analysis types:
+    - Code review and quality assessment
+    - Requirement extraction from documents
+    - Technology stack recommendations
+    - Risk assessment and mitigation planning
+    
+    Attributes:
+        supported_models (dict): Registry of available AI models with metadata
+    """
+    
     def __init__(self):
+        """Initialize the AI Engine with supported models configuration.
+        
+        Sets up the registry of available AI models with their capabilities,
+        providers, and metadata. This configuration determines which models
+        are available for different analysis types.
+        """
+        # Registry of supported AI models with comprehensive metadata
         self.supported_models = {
-            "gpt2": {
-                "name": "GPT-2",
-                "description": "General-purpose model for text generation and completion",
+            "google/flan-t5-base": {
+                "name": "FLAN-T5 Base",
+                "description": "General-purpose model for natural language understanding",
                 "capabilities": ["text_generation", "question_answering", "summarization"],
-                "provider": "OpenAI",
+                "provider": "Google",
                 "version": "base"
             },
             "facebook/bart-large-mnli": {
@@ -64,7 +76,7 @@ class AIEngine:
             logger.info(f"Starting analysis {analysis_id} for type: {req.analysis_type}")
             
             # Determine which model to use
-            model_id = req.model or "gpt2"
+            model_id = req.model or "google/flan-t5-base"
             if model_id not in self.supported_models:
                 raise ValueError(f"Unsupported model: {model_id}")
             
@@ -207,78 +219,53 @@ class AIEngine:
         
         return recommendations
 
-    def generate_response(self, conversation_history: List[Dict[str, str]]) -> str:
-        """Generate response for backward compatibility with ConversationManager.
+    def check_hf_api_health(self):
+        """Check HuggingFace API connectivity and health status.
         
-        This method maintains backward compatibility while providing enhanced functionality
-        through the analyze_content method when appropriate.
-        """
-        if not conversation_history:
-            return "Please provide some context for me to respond to."
+        This method performs a lightweight health check on the HuggingFace API
+        by making a simple request to verify connectivity and authentication.
         
-        # Combine conversation history into a single context
-        context_parts = []
-        for turn in conversation_history:
-            role = turn.get("role", "user")
-            content = turn.get("content", "")
-            context_parts.append(f"{role.title()}: {content}")
-        
-        context = "\n".join(context_parts)
-        
-        # Use the existing generate_response function for simple responses
-        return generate_response(context)
-    
-    def analyze_and_summarize(self, conversation_history: List[Dict[str, str]], 
-                            analysis_type: str = "summarization") -> Dict[str, Any]:
-        """Enhanced summarization using analyze_content method.
-        
-        Args:
-            conversation_history: List of conversation turns
-            analysis_type: Type of analysis to perform (default: 'summarization')
-            
         Returns:
-            Dictionary containing analysis results with backward compatible summary
+            dict: Health status information containing:
+                - status: 'healthy', 'degraded', or 'unhealthy'
+                - message: Descriptive message about the API status
+                - response_time_ms: API response time in milliseconds (if available)
+                - last_error: Last error message (if any)
         """
-        if not conversation_history:
-            return {"summary": "No conversation to summarize.", "confidence": 0.0}
-        
-        # Combine conversation history into a single context
-        context_parts = []
-        for turn in conversation_history:
-            role = turn.get("role", "user")
-            content = turn.get("content", "")
-            context_parts.append(f"{role.title()}: {content}")
-        
-        context = "\n".join(context_parts)
-        
-        # Create analysis request for summarization
-        request = AnalysisRequest(
-            content=context,
-            analysis_type=analysis_type,
-            parameters={"focus": "key_ideas", "length": "concise"}
-        )
-        
-        # Perform analysis
-        result = self.analyze_content(request)
-        
-        # Extract summary for backward compatibility
-        if analysis_type == "summarization":
-            # Generate a focused summary prompt for better results
-            summary_prompt = f"Summarize the key ideas from this conversation into a clear, actionable statement:\n\n{context}"
-            summary = generate_response(summary_prompt)
-        else:
-            # For other analysis types, use the analysis results
-            summary = str(result.results.get("generated_text", result.results))
-        
-        return {
-            "summary": summary,
-            "confidence": result.confidence,
-            "analysis_id": result.analysis_id,
-            "recommendations": result.recommendations,
-            "processing_time_ms": result.processing_time_ms,
-            "full_results": result.results
-        }
-
+        try:
+            import time
+            from scripts.ai_engine.model import _hf_request
+            
+            start_time = time.time()
+            
+            # Make a simple request to test API connectivity
+            # Using a lightweight model call with minimal payload
+            test_data = {"inputs": "test"}
+            response = _hf_request("google/flan-t5-base", test_data, retries=1)
+            
+            response_time_ms = int((time.time() - start_time) * 1000)
+            
+            return {
+                "status": "healthy",
+                "message": "HuggingFace API is accessible and responding",
+                "response_time_ms": response_time_ms
+            }
+            
+        except ValueError as e:
+            # This typically means API token is not set
+            return {
+                "status": "unhealthy",
+                "message": "HuggingFace API configuration error",
+                "last_error": str(e)
+            }
+        except Exception as e:
+            # This could be network issues, API errors, etc.
+            return {
+                "status": "degraded",
+                "message": "HuggingFace API connectivity issues",
+                "last_error": str(e)
+            }
+    
     @lru_cache(maxsize=32)
     def get_available_models(self):
         """Get list of available models with caching."""

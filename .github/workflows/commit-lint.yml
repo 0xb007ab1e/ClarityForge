@@ -7,7 +7,7 @@ jobs:
   lint-commit-message:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: "Check for issue ID"
         run: |
           if ! git log -1 --pretty=%B | grep -qE "#[0-9]+"; then

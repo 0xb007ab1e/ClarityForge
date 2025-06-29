@@ -1,6 +1,13 @@
 # Use an official Python runtime as a parent image
 FROM python:3.9-slim
 
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
 # Create a non-root user and group
 RUN groupadd -r agent && useradd -r -g agent -m -d /home/agent agent
 
@@ -13,7 +20,7 @@ COPY sandbox_wrapper.sh /usr/local/bin/sandbox_wrapper.sh
 # Copy the requirements file into the container
 COPY requirements.txt .
 
-# Install the dependencies
+# Install the dependencies with pre-built wheels where possible
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Download the spacy model

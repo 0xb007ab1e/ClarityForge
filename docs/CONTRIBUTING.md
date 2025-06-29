@@ -6,6 +6,22 @@ First off, thank you for considering contributing to ContextForge! It's people l
 
 If you've noticed a bug or have a question, [search the issue tracker](https://github.com/0xb007ab1e/ContextForge/issues) to see if someone else in the community has already created a ticket. If not, feel free to [create a new issue](https://github.com/0xb007ab1e/ContextForge/issues/new).
 
+## Development Setup
+
+To set up the development environment, you'll need both Python and Node.js dependencies:
+
+### Python Dependencies
+This project uses Poetry for Python dependency management. Install dependencies with:
+```bash
+poetry install
+```
+
+### Node.js Dependencies  
+Install Node.js dependencies for commit linting and git hooks:
+```bash
+npm install
+```
+
 ## Fork & create a branch
 
 If you'd like to contribute, please fork the repository and create a new branch. This is where you'll be making your changes.

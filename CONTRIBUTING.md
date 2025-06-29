@@ -10,7 +10,11 @@ If you've noticed a bug or have a question, [search the issue tracker](https://g
 
 If you'd like to contribute, please fork the repository and create a new branch. This is where you'll be making your changes.
 
-## Get your work on `main`
+## Branching Strategy
 
-Once you're happy with your changes, you can create a pull request. We'll review your pull request and merge it into `main` if it's a good fit.
+We use a simple branching strategy:
+
+- `main` is the primary branch. It should always be stable and deployable.
+- Feature branches are created from `main` for new features and bug fixes.
+- Once a feature branch is complete, it is merged back into `main` via a pull request.
 

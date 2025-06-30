@@ -123,7 +123,7 @@ jobs:
       continue-on-error: true  # Don't fail if SonarCloud is not configured
 
     - name: 📝 Comment PR
-      uses: actions/github-script@v6
+      uses: actions/github-script@v7
       if: failure()
       with:
         script: |
@@ -200,7 +200,7 @@ jobs:
           revert
 
     - name: Check PR Description
-      uses: actions/github-script@v6
+      uses: actions/github-script@v7
       with:
         script: |
           const { data: pr } = await github.rest.pulls.get({
